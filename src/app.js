@@ -18,6 +18,6 @@ app.use(cookieParser());
 */
 app.use('/api/auth', authRouter);
 app.use('/api/accounts', accountRouter);
-api.use('/api/transactions', transactionRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 module.exports = app;

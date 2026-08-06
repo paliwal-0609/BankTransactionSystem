@@ -99,6 +99,8 @@ async function createTransaction(req, res){
         })
     }
 
+    //Step 5, 6, 7, 8 should be completed at once, if any failed than process should be started again by the user
+
     /**
      * 5. Create Transaction (PENDING)
      */
@@ -140,6 +142,24 @@ async function createTransaction(req, res){
      */
     transaction.status = "COMPLETED"
     await transaction.save({session});
+
+    /**
+     * 9. Commit MongoDB session
+     */
+
+    await session.commitTransaction()
+    session.endSession()
+
+    /**
+     * 10. Send Transaction Email notification
+     */
+    await emailService.sendTransactionEmail(req.user.email, req.user.name, amount, toAccount);
+
+    return res.status(201).json({
+        message:"Transaction completed successfully",
+        transaction: transaction
+    })
+     
 }
 
 module.exports = {createTransaction};
