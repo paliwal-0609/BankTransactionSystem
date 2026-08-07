@@ -1,5 +1,5 @@
 const transactionModel = require('../models/transaction.model');
-const accoutmodel = require('../models/account.model');
+const accountModel = require('../models/account.model');
 const ledgerModel = require('../models/ledger.model');
 const emailService = require('../services/email.service');
 const mongoose = require('mongoose');
@@ -158,8 +158,49 @@ async function createTransaction(req, res){
     return res.status(201).json({
         message:"Transaction completed successfully",
         transaction: transaction
-    })
-     
+    }) 
+}
+
+async function creteInitialFundsTransaction(req, res) {
+    const {toAccount, amount, idempotencykey} = req.body
+
+    if(!toAccount || !amount || !idempotencykey){
+        return res.status(400).json({
+            message: "toAccount, amount and idempotencykey are required"
+        })
+    }
+
+    const toUserAccount = await accountModel.findOne({
+        _id: toAccount,
+    });
+
+    if(!toUserAccount){
+        return res.status(400).json({
+            message:"Invalid toAccount"
+        })
+    }
+
+    const fromUserAccount = await accountModel.findOne({
+        systemUser: true,
+        user: req.user._id
+    });
+
+    if(!fromUserAccount){
+        return res.status(400).json({
+            message: "System user account not found"
+        })
+    }
+
+    const session = await mongoose.startSession()
+    session.startTransaction()
+
+    const transaction = await transactionModel.create({
+        fromAccount: fromUserAccount._id,
+        toAccount,
+        amount,
+        idempotencykey,
+        status:"PENDING"
+    },{session})
 }
 
 module.exports = {createTransaction};

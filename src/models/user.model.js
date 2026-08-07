@@ -22,10 +22,10 @@ const userSchema = new mongoose.Schema({
         select: false
     },
     systemUser:{
-        type:Boolean,
+        type: Boolean,
         deafult: false,
         immutable:true,
-        select:false
+        select: false
     }
 }, {
     timestamps: true
