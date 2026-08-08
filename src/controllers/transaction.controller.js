@@ -26,7 +26,7 @@ async function createTransaction(req, res){
      */
     const {fromAccount, toAccount, amount, idempotencykey} = req.body;
 
-    if(!fromAccount || !toAccount || !amount || !idempotency){
+    if(!fromAccount || !toAccount || !amount || !idempotencykey){
         return res.status(400).json({
             message: "FromAccount, toAccount, amount and idempotencykey is required"
         })
@@ -55,7 +55,7 @@ async function createTransaction(req, res){
 
     if(isTransactionAlreadyExists){
         if(isTransactionAlreadyExists.status === 'COMPLETED'){
-            return res,status(200).json({
+            return res.status(200).json({
                 message:'Transaction already processed',
                 transaction: isTransactionAlreadyExists
             })
@@ -99,56 +99,72 @@ async function createTransaction(req, res){
         })
     }
 
-    //Step 5, 6, 7, 8 should be completed at once, if any failed than process should be started again by the user
+    let transaction;
 
-    /**
-     * 5. Create Transaction (PENDING)
-     */
-    const session = await mongoose.startSession()
-    session.startTransaction()
+    try{
+        //Step 5, 6, 7, 8 should be completed at once, if any failed than process should be started again by the user
 
-    const transaction = new transactionModel({
-        fromAccount,
-        toAccount,
-        amount,
-        idempotencykey,
-        status:"PENDING"
-    });
+        /**
+         * 5. Create Transaction (PENDING)
+         */
+        const session = await mongoose.startSession()
+        session.startTransaction()
 
-    /**
-     * 6. Create DEBIT ledger entry
-     */
+        transaction = (await transactionModel.create([{
+            fromAccount,
+            toAccount,
+            amount,
+            idempotencykey,
+            status:"PENDING"
+        }], {session}))[0];
 
-    const debitLedgerEntry = await ledgerModel.create([{
-        account: fromAccount,
-        amount: amount,
-        transaction: transaction._id,
-        type: "DEBIT"
-    }], {session})
+        /**
+         * 6. Create DEBIT ledger entry
+         */
 
-    /**
-     * 7. Create CREDIT ledger entry
-     */
+        const debitLedgerEntry = await ledgerModel.create([{
+            account: fromAccount,
+            amount: amount,
+            transaction: transaction._id,
+            type: "DEBIT"
+        }], {session});
 
-    const creditLedgerEntry = await ledgerModel.create([{
-        account: toAccount,
-        amount: amount,
-        transaction: transaction._id,
-        type: "CREDIT"
-    }], {session})
+        await(()=>{
+            return new Promise((resolve) => setTimeout(resolve, 25*1000));
+        })();
 
-    /**
-     * 8. Mark transaction COMPLETED
-     */
-    transaction.status = "COMPLETED"
-    await transaction.save({session});
+        /**
+         * 7. Create CREDIT ledger entry
+         */
 
-    /**
-     * 9. Commit MongoDB session
-     */
+        const creditLedgerEntry = await ledgerModel.create([{
+            account: toAccount,
+            amount: amount,
+            transaction: transaction._id,
+            type: "CREDIT"
+        }], {session});
 
-    await session.commitTransaction()
-    session.endSession()
+        /**
+         * 8. Mark transaction COMPLETED
+         */
+        await transactionModel.findOneAndUpdate(
+            {_id: transaction._id},
+            {status:"COMPLETED"},
+            {session}
+        )
+
+        /**
+         * 9. Commit MongoDB session
+         */
+
+        await session.commitTransaction()
+        session.endSession()
+    }
+    catch(err){
+        return res.status(400).json({
+            message:"Transaction is pending due to some issue, please try again later"
+        })
+    }
 
     /**
      * 10. Send Transaction Email notification
@@ -161,7 +177,7 @@ async function createTransaction(req, res){
     }) 
 }
 
-async function creteInitialFundsTransaction(req, res) {
+async function createInitialFundsTransaction(req, res) {
     const {toAccount, amount, idempotencykey} = req.body
 
     if(!toAccount || !amount || !idempotencykey){
@@ -227,4 +243,4 @@ async function creteInitialFundsTransaction(req, res) {
     }) 
 }
 
-module.exports = {createTransaction, creteInitialFundsTransaction};
+module.exports = {createTransaction, createInitialFundsTransaction};
