@@ -11,6 +11,7 @@ A modern, lightweight Node.js and Express backend for managing banking operation
 - Initial funds transfer support
 - Transaction email notifications
 - MongoDB persistence with Mongoose
+- Token Black Listing for user logout
 
 ## 🛠️ Tech Stack
 
@@ -34,8 +35,8 @@ A modern, lightweight Node.js and Express backend for managing banking operation
 1. Clone the repository
 2. Install dependencies:
 
-   ```bash
-   npm install
+   ```cmd
+   npm install dependency_name
    ```
 
 3. Create a `.env` file and add the required values:
@@ -43,21 +44,23 @@ A modern, lightweight Node.js and Express backend for managing banking operation
    ```env
    DB_URI=your_mongodb_connection_string
    JWT_SECRET=your_jwt_secret
-   EMAIL_USER=your_email
-   EMAIL_PASS=your_email_password
+   CLIENT_ID=your_google_client_id
+   CLIENT_SECRET=your_google_client_secret
+   REFRESH_TOKEN=your_google_refresh_token
+   EMAIL_USER=your_email_address
    ```
 
 4. Start the server:
 
-   ```bash
-   npm start
+   ```cmd
+   npm run start
    ```
 
 ## ▶️ Usage
 
 Run the app in development mode:
 
-```bash
+```cmd
 npm run dev
 ```
 
@@ -87,4 +90,4 @@ A live deployment of this project is available on Render:
 
 ## 📄 License
 
-This project is licensed under the ISC License.
+This project is licensed under the MIT License.
